@@ -217,6 +217,15 @@ function VoronoiMap() {
             })
             .attr("class", "demand_data_lines")
 
+            // Update hover panel
+            var template_dict = {}
+            template_dict.loss = total_loss
+            var source = $("#hp_info").html();
+            var template = Handlebars.compile(source);
+            var html = template(template_dict);
+            d3.select('#hover_panel')
+                .html(html)
+
 
     }
 
