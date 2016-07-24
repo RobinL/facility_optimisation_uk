@@ -1,0 +1,117 @@
+
+
+function PointsMap() {
+
+     //When the data changes we just need to redraw the overlay
+    //This function styles the points and the shaded area
+    this.style_overlay = function() {
+
+        if (!(VMT.global_key_scale)) {
+            VMT.dataholder.set_domains("current")
+            VMT.dataholder.update_colour_scales()
+        }
+
+        var point_shading_options_metric = d3.select("#pointShadingOptions").node().value
+
+        var demand_points_sel = d3.selectAll(".demand_points")
+
+        var va = demand_points_sel
+            .data(VMT.dataholder.demand_points)
+            
+       
+        va
+            .attr("cy",function(d) {return d.y})
+            .attr("cx",function(d) {return d.x})
+            .style('fill', function(d) {
+                return VMT.column_descriptions_data["demand_for_prison"]["colour_scale"](d.demand_for_prison)
+            })
+            .attr("r", function(d) {
+            	return 2
+            })
+            .attr("fill-opacity", function(d) {
+            		return 1
+		            	// var scale = d3.scaleLinear().domain([0,1000,50000]).range([0,1,1])
+             //    return scale(d.demand_for_prison)
+            })
+
+        d3.select('#map_key').remove();
+        draw_map_key_continuous()
+    
+
+    }
+
+
+    //Remove overlay and redraw
+    this.draw_from_scratch = function() {
+
+
+       VMT.mapholder.redraw()
+
+       //Filter points down to the currently selected date
+       VMT.dataholder.filter_points()
+
+       //Get layer 
+       g = d3.select("#demand_points_layer")
+
+
+       //Use leaflet's internal functions to convert the 
+       //points' lat lng into x y values corresponding to the leaflet map
+       VMT.dataholder.demand_points = VMT.dataholder.demand_points.map(function(d) {
+
+                var latlng = new L.LatLng(d.lat, d.lng);
+                var point = VMT.mapholder.map.latLngToLayerPoint(latlng);
+
+                d.x = point.x;
+                d.y = point.y;
+
+                return d
+      
+            });
+
+
+
+
+        //Now our 'current points' contain all the information we need to draw the voronoi map
+        //For each filtered point, covert the lat lng into x y point in svg space
+        var demand_points_sel = g.selectAll(".demand_points")
+                .data(VMT.dataholder.demand_points)
+                .enter()
+
+
+        demand_points_sel.append("circle").attr("class", "demand_points")
+        
+
+        //Finally we want to clip anything plotted by d3 to the shapefile of the UK
+
+
+        //Take the geojson stream and convert to the leaflet coordinate system
+        function projectPoint(x, y) {
+            var point = VMT.mapholder.map.latLngToLayerPoint(new L.LatLng(y, x));
+            this.stream.point(point.x, point.y);
+        }
+
+        var transform = d3.geoTransform({
+            point: projectPoint
+        })
+
+        var path = d3.geoPath().projection(transform);
+
+     
+
+        me.style_overlay()
+
+
+    }
+
+    var me = this;
+
+    var geo_collection = geo_collection;
+
+    
+    VMT.mapholder.map.on('viewreset moveend', this.draw_from_scratch);
+
+    this.draw_from_scratch()
+
+   
+
+}

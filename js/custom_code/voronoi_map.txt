@@ -1,0 +1,278 @@
+
+
+function VoronoiMap() {
+
+    var bounds = VMT.mapholder.map.getBounds(),
+    topLeft = VMT.mapholder.map.latLngToLayerPoint(bounds.getNorthWest()),
+    bottomRight = VMT.mapholder.map.latLngToLayerPoint(bounds.getSouthEast())
+        
+    var voronoi_fn = d3.voronoi()
+            .x(function(d) {
+                return d.x ;  //To avoid two points being at the same pixel values and therefore having an uncomputable voronoi
+            })
+            .y(function(d) {
+                return d.y ;  //To avoid two points being at the same pixel values
+            })
+            .extent([
+                [0, 0],
+                [bottomRight.x, bottomRight.y]
+            ])
+
+    this.draw_from_scratch = function() {
+
+        //Get layers 
+    
+        me.voronoi_cells_layer = d3.select("#voronoi_cells_layer")
+        me.demand_lines_layer = d3.select("#demand_lines_layer")
+        me.facility_location_layer = d3.select("#facility_location_layer")
+
+        // Draw cells
+
+        redraw_voronoi()
+
+    }
+
+    this.locations = []
+
+    
+
+    new_location = {
+      "id": "hello3",
+      "lat": 51.9039908342,
+      "lng": 0.1283539949,
+    }
+
+    this.locations.push(new_location)
+
+    me = this;
+
+    function update_dots(point) {
+
+
+
+        new_location = {
+          "id": "hello5",
+          "lat": point.latlng.lat,
+          "lng": point.latlng.lng,
+          "x": point.layerPoint.x,
+          "y": point.layerPoint.y
+        }
+        me.locations.push(new_location)
+
+
+        
+        redraw_voronoi()
+
+    }
+
+    var drag = d3.drag()
+        .on("drag", dragged)
+
+    function dragged(d) {
+
+
+        d.y = d3.event.y
+        d.x = d3.event.x
+
+        // convert to lat lng
+        latlng = VMT.mapholder.map.layerPointToLatLng([d.x,d.y])
+
+     
+        this.__data__.data.lat = latlng.lat;
+        this.__data__.data.lng = latlng.lng;
+
+        //update locations data
+        me.locations = d3.select("#facility_location_layer").selectAll(".locations_circles").data()
+
+        me.locations = _.map(me.locations, function(d) {
+            return d.data
+        })
+
+        // current_loss = compute_loss()
+        redraw_voronoi()
+    }
+
+
+
+    function redraw_voronoi() {
+
+        var bounds = VMT.mapholder.map.getBounds(),
+        topLeft = VMT.mapholder.map.latLngToLayerPoint(bounds.getNorthWest()),
+        bottomRight = VMT.mapholder.map.latLngToLayerPoint(bounds.getSouthEast())
+            
+        var voronoi_fn = d3.voronoi()
+                .x(function(d) {
+                    return d.x ;  //To avoid two points being at the same pixel values and therefore having an uncomputable voronoi
+                })
+                .y(function(d) {
+                    return d.y ;  //To avoid two points being at the same pixel values
+                })
+                .extent([
+                    [topLeft.x, topLeft.y],
+                    [bottomRight.x, bottomRight.y]
+                ])
+
+        // Convert lat lng to points
+        me.locations = _.map(me.locations,function(d) {
+
+            var latlng = new L.LatLng(d.lat, d.lng);
+            var point = VMT.mapholder.map.latLngToLayerPoint(latlng);
+
+            d.x = point.x;
+            d.y = point.y;
+
+            return d
+  
+        });
+
+
+        var diagram = voronoi_fn.polygons(me.locations)
+
+        function path_generator(d) {
+    
+            return d ? "M" + d.join("L") + "Z" : null
+        }
+
+        var v_cells = me.voronoi_cells_layer.selectAll(".voronoicells")
+            .data(diagram)
+
+        v_cells.enter().append("path").merge(v_cells)
+            .attr("class", "voronoicells")
+            .attr("d", function(d) {
+                return path_generator(d)
+            })
+            .attr("fill", "black")
+
+        var circles = me.facility_location_layer.selectAll(".locations_circles")
+            .data(diagram)
+
+        circles = circles.enter().append("circle")
+            .attr("r", function(d) {
+                return 10
+            })
+            .attr("class", "locations_circles")
+            .call(drag)
+            .merge(circles)
+            .attr("cx", function(d) {
+                console.log(d)
+                return d.data.x
+            })
+            .attr("cy", function(d) {
+                return d.data.y
+            })
+            .style("stroke", "lightblue")
+            .style("stroke-width", 5)
+            .attr("fill", "black")
+            .attr("class", "locations_circles")
+
+
+        draw_loss()
+
+    }
+
+    function draw_loss() {
+
+        var loss_dict = compute_loss()
+        var loss_data = loss_dict.loss_data
+        var total_loss = loss_dict.total_loss
+
+        // Get min and max distance
+        var min_loss = _.min(loss_data, function(d) {
+            return d.loss
+        })["loss"]
+        var max_loss = _.max(loss_data, function(d) {
+            return d.loss
+        })["loss"]
+        var mid = (min_loss + max_loss) / 2
+
+        var loss_line_colour_scale = d3.scaleLinear().domain([min_loss, mid, max_loss]).range(["#04CE4E", "#CE8E00", "#CE043A"])
+        var loss_line_width_scale = d3.scaleLinear().domain([min_loss, mid, max_loss]).range([0.5, 1, 10])
+        var loss_line_opacity_scale = d3.scaleLinear().domain([min_loss, mid, max_loss]).range([0.3, 0.5, 1])
+      
+         me.demand_lines_layer.selectAll(".demand_data_lines").remove()
+
+         me.demand_lines_layer.selectAll(".demand_data_lines").data(loss_data)
+            .enter()
+            .append("line")
+            .attr("x1", function(d) {
+                return d.this_point.x
+            })
+            .attr("y1", function(d) {
+                return d.this_point.y
+            })
+            .attr("x2", function(d) {
+                return d.closest_point.x
+            })
+            .attr("y2", function(d) {
+                return d.closest_point.y
+            })
+            .style("stroke", function(d) {
+                return loss_line_colour_scale(d.loss)
+            })
+            .style("stroke-width", function(d) {
+                return loss_line_width_scale(d.loss)
+            })
+            .style("stroke-opacity", function(d) {
+                return loss_line_opacity_scale(d.loss)
+            })
+            .attr("class", "demand_data_lines")
+
+
+    }
+
+    function compute_loss() {
+
+        var loss_data = _.map(VMT.dataholder.demand_points, function(d) {
+            var closest_point = get_closest_point(d)
+            var this_distance = get_distance(d, closest_point)
+            return {
+                this_point: d,
+                closest_point: closest_point,
+                distance: this_distance,
+                demand: d.demand_for_prison,
+                loss: this_distance * d.demand_for_prison
+            }
+        })
+
+
+
+        var total_loss = 0
+        _.each(loss_data, function(d) {
+            total_loss = total_loss + d.loss
+        })
+
+        return {
+            loss_data: loss_data,
+            total_loss: total_loss
+        }
+
+    }
+
+    function get_closest_point(demand_point) {
+        var locations2 = _.sortBy(me.locations, function(this_location) {
+            return get_distance(this_location, demand_point)
+        })
+        return locations2[0]
+    }
+
+    function get_distance(p1, p2) {
+
+        
+        var latlng1 = new L.LatLng(p1.lat, p1.lng);
+        var latlng2 = new L.LatLng(p2.lat, p2.lng);
+
+        return latlng1.distanceTo(latlng2)/1000
+    }
+
+    this.draw_from_scratch()
+
+
+    VMT.mapholder.map.on('viewreset moveend', this.draw_from_scratch);
+
+    VMT.mapholder.map.on("click", function(d) {
+        update_dots(d)
+    })
+
+
+
+}
