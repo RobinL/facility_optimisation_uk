@@ -49,6 +49,7 @@ $.when(p1,p2).done(function(topo_data, csv_data) {
 
   $("#filter_records_date_field").on("change", function(d) {
     VMT.pointsmap.draw_from_scratch()
+
   })
 
   $("#shadingOptions,  #pointShadingOptions").on("change", function(d) {
@@ -69,36 +70,21 @@ $.when(p1,p2).done(function(topo_data, csv_data) {
 
 
 
-  d3.select("#plus_dates").on("click", function(d) {
-
-        var current = $("#filter_records_date_field").val()
-        
-        var periods = VMT.period_options 
-      
-        var current_index = periods.indexOf(current)
-        var new_index = Math.min(current_index + 1, periods.length - 1)
-        var new_period = periods[new_index]
-
-        $("#filter_records_date_field").val(new_period).change();
-
-    });
-
-  d3.select("#minus_dates").on("click", function(d) {
-
-        var current = $("#filter_records_date_field").val()
-        var periods = VMT.period_options 
-
-        var current_index = periods.indexOf(current)
-        var new_index = Math.max(current_index - 1, 0)
-        var new_period = periods[new_index]
-
-        $("#filter_records_date_field").val(new_period).change();
-
+ $("#toggle_basemap").on("click", function(d) {
+      if (VMT.mapholder.tiles_visible) {
+        VMT.mapholder.map.removeLayer(VMT.mapholder.tilelayer)
+        VMT.mapholder.tiles_visible = false
+      } else {
+        VMT.mapholder.map.addLayer(VMT.mapholder.tilelayer)
+        VMT.mapholder.tiles_visible = true
+      }
     })
 
-  d3.select("#new_fieldset_button").on("click", function() {
-            add_fieldset_html();
-        })
+   $("#input_point_size, #input_line_thickness, #cell_opacity_input").on("change", function(d) {
+    VMT.voronoi_map.draw_from_scratch()
+    VMT.pointsmap.draw_from_scratch()
+
+   })
 
   //Finally draw map
   VMT.pointsmap = new PointsMap();

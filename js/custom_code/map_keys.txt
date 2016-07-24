@@ -86,6 +86,15 @@ var draw_map_key_continuous = function() {
         .style("margin-top", topLeft.y + "px")
         .style("pointer-events", "none");
 
+    svg.append("g")
+    .attr("transform", "translate(" + key_position_left + "," + key_position_top + ")")
+        .append("rect")
+        .attr("x",-50)
+        .attr("y",-40)
+        .attr("height", 350)
+        .attr("width", 100)
+        .attr("fill", "white")
+
     steps = _.map(d3.range(num_steps), function(i) {
         return i * key_height / num_steps
     })

@@ -149,12 +149,15 @@ function VoronoiMap() {
         var v_cells = me.voronoi_cells_layer.selectAll(".voronoicells")
             .data(diagram)
 
+        var cell_opacity = $("#cell_opacity_input").val()
+
         v_cells.enter().append("path").merge(v_cells)
             .attr("class", "voronoicells")
             .attr("d", function(d) {
                 return path_generator(d)
             })
             .attr("fill", "black")
+            .style("fill-opacity", cell_opacity)
 
         var circles = me.facility_location_layer.selectAll(".locations_circles")
             .data(diagram)
@@ -199,8 +202,10 @@ function VoronoiMap() {
         })["loss"]
         var mid = (min_loss + max_loss) / 2
 
+        var k = $("#input_line_thickness").val()/10
+
         var loss_line_colour_scale = d3.scaleLinear().domain([min_loss, mid, max_loss]).range(["#04CE4E", "#CE8E00", "#CE043A"])
-        var loss_line_width_scale = d3.scaleLinear().domain([min_loss, mid, max_loss]).range([0.5, 1, 10])
+        var loss_line_width_scale = d3.scaleLinear().domain([min_loss, mid, max_loss]).range([0.5*k, 1*k, 10*k])
         var loss_line_opacity_scale = d3.scaleLinear().domain([min_loss, mid, max_loss]).range([0.3, 0.5, 1])
       
          me.demand_lines_layer.selectAll(".demand_data_lines").remove()

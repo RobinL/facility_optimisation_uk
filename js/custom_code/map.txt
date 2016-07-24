@@ -1,13 +1,18 @@
 function MapHolder() {
 
+	this.tiles_visible = true
+	this.tilelayer = new L.TileLayer("https://tiles.wmflabs.org/bw-mapnik/{z}/{x}/{y}.png")
 	this.map = new L.Map("map", {
 	                        center: [52.53, -0.09],
 	                        zoom: 7,
 	                        errorTileUrl: 'error.png'
 	                    })
-	                    .addLayer(new L.TileLayer("https://tiles.wmflabs.org/bw-mapnik/{z}/{x}/{y}.png"));
+	                    .addLayer(this.tilelayer);
+
+    
 
 
+    
 
 	var bounds = this.map.getBounds(),
 	    topLeft = this.map.latLngToLayerPoint(bounds.getNorthWest()),
