@@ -2,6 +2,13 @@
 
 function VoronoiMap() {
 
+    var current_loss = null;
+    var jitter_start_size = 200;
+    var jitter_multi_when_previous_improved = 1;
+    var jitter_multi_when_previous_worse = 0.9;
+    var timer = null;
+
+
     var bounds = VMT.mapholder.map.getBounds(),
     topLeft = VMT.mapholder.map.latLngToLayerPoint(bounds.getNorthWest()),
     bottomRight = VMT.mapholder.map.latLngToLayerPoint(bounds.getSouthEast())
@@ -40,9 +47,12 @@ function VoronoiMap() {
       "id": "hello3",
       "lat": 51.9039908342,
       "lng": 0.1283539949,
+        previous_jitter: [0, 0],
+        previous_loss_improve: false,
+        jitter_size: jitter_start_size
     }
 
-    this.locations.push(new_location)
+    // this.locations.push(new_location)
 
     me = this;
 
@@ -55,7 +65,10 @@ function VoronoiMap() {
           "lat": point.latlng.lat,
           "lng": point.latlng.lng,
           "x": point.layerPoint.x,
-          "y": point.layerPoint.y
+          "y": point.layerPoint.y,
+          previous_jitter: [0, 0],
+        previous_loss_improve: false,
+        jitter_size: jitter_start_size
         }
         me.locations.push(new_location)
 
@@ -154,7 +167,6 @@ function VoronoiMap() {
             .call(drag)
             .merge(circles)
             .attr("cx", function(d) {
-                console.log(d)
                 return d.data.x
             })
             .attr("cy", function(d) {
@@ -171,6 +183,8 @@ function VoronoiMap() {
     }
 
     function draw_loss() {
+
+        if (me.locations.length ==0) { return null}
 
         var loss_dict = compute_loss()
         var loss_data = loss_dict.loss_data
@@ -219,7 +233,7 @@ function VoronoiMap() {
 
             // Update hover panel
             var template_dict = {}
-            template_dict.loss = total_loss
+            template_dict.loss = d3.format(",.0f")(total_loss);
             var source = $("#hp_info").html();
             var template = Handlebars.compile(source);
             var html = template(template_dict);
@@ -275,12 +289,161 @@ function VoronoiMap() {
 
     this.draw_from_scratch()
 
-
     VMT.mapholder.map.on('viewreset moveend', this.draw_from_scratch);
 
     VMT.mapholder.map.on("click", function(d) {
+        if (timer) {
+            clearTimeout(timer)
+        };
         update_dots(d)
     })
+
+    function optimise_tick() {
+
+        _.each(me.locations, function(d) {
+            d.previous_jitter=[0, 0],
+            d.previous_loss_improve=false,
+            d.jitter_size=jitter_start_size
+        })
+        timer = setInterval(function() {
+            optimise_locations()
+        }, 0)
+    }
+
+    $('#optimise').on('click', optimise_tick)
+
+    $('#stop').on('click', function(d) {
+        clearTimeout(timer)
+    })
+
+    function optimise_locations() {
+        // For each location, try a small movement and if it improves the loss function, do it
+        if (!(current_loss)) {
+            current_loss = compute_loss()
+        }
+        console.log("reoptimising")
+
+        for (var i = 0; i < me.locations.length; i++) {
+
+            var saved_location = jQuery.extend({}, me.locations[i]);
+
+            // if loss improved previousy
+            if (me.locations[i].previous_loss_improve) {
+                this_jitter = _.map(me.locations[i].previous_jitter, function(d) {
+                    return d * jitter_multi_when_previous_improved
+                })
+            } else {
+
+                me.locations[i].jitter_size = me.locations[i].jitter_size * jitter_multi_when_previous_worse;
+
+                
+            }
+
+            //Ocasionally add large jitter just to check it doesn't make things better
+                var js = me.locations[i].jitter_size
+
+                if (d3.randomUniform()() > 0.95) {
+                    me.locations[i].jitter_size = jitter_start_size * d3.randomUniform()();
+                    js = me.locations[i].jitter_size;
+                }
+
+                this_jitter = _.map([0, 0], function(d) {
+                    return d3.randomUniform(-js, js)()
+                })
+
+
+            //Modify the location of this point
+            me.locations[i].x += this_jitter[0]
+            me.locations[i].y += this_jitter[1]
+
+            var latlng = VMT.mapholder.map.layerPointToLatLng([me.locations[i].x,me.locations[i].y])
+            me.locations[i].lat = latlng.lat;
+            me.locations[i].lng = latlng.lng;
+
+
+            me.locations[i].previous_jitter = this_jitter
+
+            //Recompute loss
+            new_loss = compute_loss()
+
+
+            //If new loss is worse, undo 
+            if (new_loss.total_loss > current_loss.total_loss) {
+                me.locations[i] = saved_location;
+                me.locations[i].jitter_size = me.locations[i].jitter_size * jitter_multi_when_previous_worse;
+                me.locations[i].previous_loss_improve = false;
+                
+
+            } else {
+                current_loss = new_loss
+                me.locations[i].previous_loss_improve = true;
+
+
+            }
+
+
+        }
+
+        //Ocasionally add large jitter to all points just to check it doesn't make things better - do this when all jitters are small
+
+        var max_jitter_size = _.map(me.locations, function(d) {return d.jitter_size})
+        var max_jitter_size = _.max(test)
+        var test =  (d3.randomUniform()() > 0.75 & max_jitter_size<0.0001) 
+
+
+        if (test) {
+            saved_locations = $.extend(true, [], me.locations);  
+            for (var i = 0; i < me.locations.length; i++) {
+
+                js = d3.randomUniform(-jitter_start_size, jitter_start_size)()
+
+                this_jitter = _.map([0, 0], function(d) {
+                        return d3.randomUniform(-js, js)()
+                    })
+                
+
+                if (d3.randomUniform()() > 0.5) {
+
+                    //Modify the location of this point
+                    me.locations[i].x += this_jitter[0]
+                    me.locations[i].y += this_jitter[1]
+                    me.locations[i].previous_jitter = [0,0]
+                    me.locations[i].previous_loss_improve = false
+                    me.locations[i].jitter_size = jitter_start_size
+
+                    var latlng = VMT.mapholder.map.layerPointToLatLng([me.locations[i].x,me.locations[i].y])
+                    me.locations[i].lat = latlng.lat;
+                    me.locations[i].lng = latlng.lng;
+
+
+                }
+                
+
+            }
+
+
+            new_loss = compute_loss()
+
+            //If new loss is worse, undo 
+            if (new_loss.total_loss >= current_loss.total_loss) {
+                me.locations = saved_locations;
+
+            } else {
+                current_loss = new_loss
+                console.log("randomised improvement")
+
+            }
+        }
+
+
+
+
+        redraw_voronoi()
+
+
+    }
+
+
 
 
 

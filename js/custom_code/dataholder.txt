@@ -16,36 +16,10 @@ function DataHolder(csv_data) {
 
         var filter_format = VMT.column_descriptions_data[VMT.filter_field].format
         
-        this.demand_points = _.filter(this.all_csv_data, function(d) {
-            return (filter_format(d[VMT.filter_field]) == filter_value)
-        })
+        this.demand_points = this.all_csv_data
 
 
-        var list_of_filters = []
-
-
-        var fieldsets = d3.select("#fieldsetholder").selectAll("fieldset").each(function(d) {
-
-            var column = d3.select(this).select(".filter_records_categorical_field")
-            column = $(column[0]).val();
-
-            var value = d3.select(this).select(".filter_records_categorical_value")
-            value = $(value[0]).val();
-
-            if (column != "none") {
-                list_of_filters.push({"column": column, "value":value})
-            }
-
-        })
-
-
-        this.demand_points = _.filter(this.demand_points, function(d) {
-
-            return _.all(list_of_filters, function(this_filter){
-                return d[this_filter["column"]] == this_filter["value"]
-            })
-
-        })
+  
         
 
      
@@ -256,7 +230,7 @@ function DataHolder(csv_data) {
 
     this.update_colour_scales = function() {
 
-        var colourScaleOption = $("#colourOptions").val()
+        var colourScaleOption = "Double condensed"
         var colour_scale = VMT.colour_options[colourScaleOption]
 
         // Iterate through the column_descriptions_data updating the colour scale

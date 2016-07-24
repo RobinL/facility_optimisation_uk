@@ -11,7 +11,7 @@ function PointsMap() {
             VMT.dataholder.update_colour_scales()
         }
 
-        var point_shading_options_metric = d3.select("#pointShadingOptions").node().value
+        var point_shading_options_metric = "demand_for_prison"
 
         var demand_points_sel = d3.selectAll(".demand_points")
 
