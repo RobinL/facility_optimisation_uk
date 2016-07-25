@@ -11,6 +11,7 @@ $.when(p1,p2).done(function(topo_data, csv_data) {
 
   VMT.mapholder = new MapHolder()
 
+
   //Convert topo_json to geojson
   var geo_collection = topo_data[0]
   var geo_collection = topojson.feature(geo_collection, geo_collection.objects.subunits)

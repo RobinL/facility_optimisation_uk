@@ -100,7 +100,8 @@ function VoronoiMap() {
         me.locations = _.map(me.locations, function(d) {
             return d.data
         })
-
+        d3.select('#hover_panel')
+                    .html("redrawing")
         // current_loss = compute_loss()
         redraw_voronoi()
     }
@@ -121,8 +122,8 @@ function VoronoiMap() {
                     return d.y ;  //To avoid two points being at the same pixel values
                 })
                 .extent([
-                    [topLeft.x, topLeft.y],
-                    [bottomRight.x, bottomRight.y]
+                    [-100000, -100000],
+                    [100000, 100000]  //Need silly extent otherwise some circles get deleted when you zoom in too much
                 ])
 
         // Convert lat lng to points
@@ -158,30 +159,74 @@ function VoronoiMap() {
             })
             .attr("fill", "black")
             .style("fill-opacity", cell_opacity)
+            .on("mouseover", function(d) {
+
+                var total_loss = 0
+                _.each(me.locations, function(d) {
+                    return total_loss += d.total_loss;
+                })
+
+
+                // Update hover panel
+                var template_dict = {}
+                template_dict.loss = d3.format(",.0f")(total_loss);
+
+              
+
+                var this_format = d3.format(",.0f")
+                template_dict.total_loss = this_format(d.data.total_loss) 
+                template_dict.total_demand = this_format(d.data.total_demand) 
+                template_dict.total_crimes = this_format(d.data.total_crimes) 
+                template_dict.id = d.data.id
+
+
+
+                var source = $("#hp_info").html();
+                var template = Handlebars.compile(source);
+                var html = template(template_dict);
+                d3.select('#hover_panel')
+                    .html(html)
+
+                
+            })
+
+  
+
+
+
+
+
+        draw_loss()
 
         var circles = me.facility_location_layer.selectAll(".locations_circles")
             .data(diagram)
 
+        // Scale for circle radius
+        var max = _.max(me.locations, function(d) {return d.total_demand})["total_demand"]
+        var min = _.min(me.locations, function(d) {return d.total_demand})["total_demand"]
+
+        if (min==max) {min = max-1}
+        var facility_size_scale = d3.scaleLinear().domain([0,max]).range([5,15])
+        var border_colour_scale = d3.scaleLinear().domain([min,max]).range(["#AAA","#00B0FF"])
+
         circles = circles.enter().append("circle")
-            .attr("r", function(d) {
-                return 10
-            })
+            
             .attr("class", "locations_circles")
             .call(drag)
             .merge(circles)
+            .attr("r", function(d) {
+                return facility_size_scale(d.data.total_demand)
+            })
             .attr("cx", function(d) {
                 return d.data.x
             })
             .attr("cy", function(d) {
                 return d.data.y
             })
-            .style("stroke", "lightblue")
+            .style("stroke", function(d) {return border_colour_scale(d.data.total_demand)})
             .style("stroke-width", 5)
             .attr("fill", "black")
             .attr("class", "locations_circles")
-
-
-        draw_loss()
 
     }
 
@@ -240,28 +285,18 @@ function VoronoiMap() {
 
             //Want to normalise demand against 85000 prison population and compute 'per prison' demand
 
-            // Update hover panel
+              // Update hover panel
             var template_dict = {}
-            template_dict.loss = d3.format(",.0f")(total_loss);
+            template_dict.total_loss = d3.format(",.0f")(total_loss);
 
-            template_dict.locations = jQuery.extend({}, me.locations);
-
-            _.each(template_dict.locations, function(d) {
-                var this_format = d3.format(",.0f")
-                d.total_loss = this_format(d.total_loss) 
-                d.total_demand = this_format(d.total_demand) 
-                d.total_crimes = this_format(d.total_crimes) 
-
-            })
+           
 
 
-
-            var source = $("#hp_info").html();
+            var source = $("#hp_info_simple").html();
             var template = Handlebars.compile(source);
             var html = template(template_dict);
             d3.select('#hover_panel')
                 .html(html)
-
 
     }
 
@@ -350,6 +385,7 @@ function VoronoiMap() {
     })
 
     function optimise_locations() {
+
         // For each location, try a small movement and if it improves the loss function, do it
         if (!(current_loss)) {
             current_loss = compute_loss()
