@@ -44,7 +44,7 @@ function VoronoiMap() {
     
 
     new_location = {
-      "id": "prison_1",
+      "id": "facility_1",
       "lat": 51.9039908342,
       "lng": 0.1283539949,
         previous_jitter: [0, 0],
@@ -61,7 +61,7 @@ function VoronoiMap() {
 
 
         new_location = {
-          "id": "prison_" + (me.locations.length + 1),
+          "id": "facility_" + (me.locations.length + 1),
           "lat": point.latlng.lat,
           "lng": point.latlng.lng,
           "x": point.layerPoint.x,
