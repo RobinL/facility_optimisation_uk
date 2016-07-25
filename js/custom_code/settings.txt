@@ -28,7 +28,7 @@ VMT.categorical_colours = ["#777",
 //Manual overrides on the description of the columns in the csv file.
 VMT.column_descriptions_data = {
     "demand_for_prison": {
-        "long_name": "Demand for prison",
+        "long_name": "Demand",
         "format": d3.format(",.0f")
     },
     "metric_2": {
