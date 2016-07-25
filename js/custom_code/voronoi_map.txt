@@ -44,7 +44,7 @@ function VoronoiMap() {
     
 
     new_location = {
-      "id": "hello3",
+      "id": "prison_1",
       "lat": 51.9039908342,
       "lng": 0.1283539949,
         previous_jitter: [0, 0],
@@ -61,7 +61,7 @@ function VoronoiMap() {
 
 
         new_location = {
-          "id": "hello5",
+          "id": "prison_" + (me.locations.length + 1),
           "lat": point.latlng.lat,
           "lng": point.latlng.lng,
           "x": point.layerPoint.x,
@@ -190,14 +190,16 @@ function VoronoiMap() {
         if (me.locations.length ==0) { return null}
 
         var loss_dict = compute_loss()
-        var loss_data = loss_dict.loss_data
+        // var loss_data = loss_dict.loss_data
         var total_loss = loss_dict.total_loss
 
+        //For each prison compute demand
+
         // Get min and max distance
-        var min_loss = _.min(loss_data, function(d) {
+        var min_loss = _.min(VMT.dataholder.demand_points, function(d) {
             return d.loss
         })["loss"]
-        var max_loss = _.max(loss_data, function(d) {
+        var max_loss = _.max(VMT.dataholder.demand_points, function(d) {
             return d.loss
         })["loss"]
         var mid = (min_loss + max_loss) / 2
@@ -210,14 +212,14 @@ function VoronoiMap() {
       
          me.demand_lines_layer.selectAll(".demand_data_lines").remove()
 
-         me.demand_lines_layer.selectAll(".demand_data_lines").data(loss_data)
+         me.demand_lines_layer.selectAll(".demand_data_lines").data(VMT.dataholder.demand_points)
             .enter()
             .append("line")
             .attr("x1", function(d) {
-                return d.this_point.x
+                return d.x
             })
             .attr("y1", function(d) {
-                return d.this_point.y
+                return d.y
             })
             .attr("x2", function(d) {
                 return d.closest_point.x
@@ -236,9 +238,24 @@ function VoronoiMap() {
             })
             .attr("class", "demand_data_lines")
 
+            //Want to normalise demand against 85000 prison population and compute 'per prison' demand
+
             // Update hover panel
             var template_dict = {}
             template_dict.loss = d3.format(",.0f")(total_loss);
+
+            template_dict.locations = jQuery.extend({}, me.locations);
+
+            _.each(template_dict.locations, function(d) {
+                var this_format = d3.format(",.0f")
+                d.total_loss = this_format(d.total_loss) 
+                d.total_demand = this_format(d.total_demand) 
+                d.total_crimes = this_format(d.total_crimes) 
+
+            })
+
+
+
             var source = $("#hp_info").html();
             var template = Handlebars.compile(source);
             var html = template(template_dict);
@@ -250,27 +267,38 @@ function VoronoiMap() {
 
     function compute_loss() {
 
-        var loss_data = _.map(VMT.dataholder.demand_points, function(d) {
-            var closest_point = get_closest_point(d)
-            var this_distance = get_distance(d, closest_point)
-            return {
-                this_point: d,
-                closest_point: closest_point,
-                distance: this_distance,
-                demand: d.demand_for_prison,
-                loss: this_distance * d.demand_for_prison
-            }
+        _.each(me.locations, function(d) {
+            d.total_demand = 0;
+            d.total_loss = 0;
+            d.total_crimes = 0;
         })
 
+        _.each(VMT.dataholder.demand_points, function(d) {
+            var closest_point = get_closest_point(d)
+            var this_distance = get_distance(d, closest_point)
 
+            d.closest_point = closest_point;
+            d.distance = this_distance;
+            d.loss = this_distance * d.demand_for_prison;
+
+            _.each(me.locations, function(this_location) {
+                if (this_location.id == d.closest_point.id) {
+                    this_location.total_demand += (d.demand_for_prison/VMT.dataholder.total_demand)*85422
+                    this_location.total_loss += d.loss
+                    this_location.total_crimes += d.demand_for_prison
+                }
+            })
+
+            
+            
+        })
 
         var total_loss = 0
-        _.each(loss_data, function(d) {
+        _.each(VMT.dataholder.demand_points, function(d) {
             total_loss = total_loss + d.loss
         })
 
         return {
-            loss_data: loss_data,
             total_loss: total_loss
         }
 

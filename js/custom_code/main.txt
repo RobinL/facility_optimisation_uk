@@ -28,6 +28,9 @@ $.when(p1,p2).done(function(topo_data, csv_data) {
   VMT.dataholder.parse_columns()
   VMT.dataholder.set_domains("all")  
   VMT.dataholder.filter_out_invalid_coordinates()
+  VMT.dataholder.filter_points()
+  VMT.dataholder.compute_total_demand()
+
   
   //Draw options
   var list_of_metrics = getListOfOptions();
@@ -86,9 +89,11 @@ $.when(p1,p2).done(function(topo_data, csv_data) {
 
    })
 
+
+
   //Finally draw map
   VMT.pointsmap = new PointsMap();
-     VMT.voronoi_map = new VoronoiMap()
+  VMT.voronoi_map = new VoronoiMap()
 
 
 });

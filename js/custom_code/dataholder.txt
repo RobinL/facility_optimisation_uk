@@ -16,13 +16,17 @@ function DataHolder(csv_data) {
 
         var filter_format = VMT.column_descriptions_data[VMT.filter_field].format
         
-        this.demand_points = this.all_csv_data
+        me.demand_points = me.all_csv_data
 
+    };
 
-  
-        
+    this.compute_total_demand = function() {
 
-     
+        me.total_demand = 0
+
+        _.each(this.demand_points, function(d) {
+            me.total_demand += d.demand_for_prison
+        })
 
     }
 
