@@ -3,7 +3,7 @@ var VMT = {} //VoronoiMapTemplate
 VMT.filter_field = "date"
 
 VMT.shapefile_path = "topojson/uk_boundaries.json"
-VMT.csv_path = "data/demand_for_prison_small.csv"
+VMT.csv_path = "data/demand_for_prison_10000.csv"
 
 //Colour options for shading
 VMT.colour_options = {

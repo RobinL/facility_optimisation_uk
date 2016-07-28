@@ -58,6 +58,16 @@ function VoronoiMap() {
 
     function update_dots(point) {
 
+        // If the new point is within 0.5km of an existing point, don't add
+
+        var closest_point = get_closest_point(point.latlng)
+        if (closest_point) {
+            var this_distance = get_distance(point.latlng, closest_point)
+            if (this_distance<0.5) {
+                return 
+            }
+        }
+        
 
 
         new_location = {
@@ -84,22 +94,34 @@ function VoronoiMap() {
     function dragged(d) {
 
 
-        d.y = d3.event.y
-        d.x = d3.event.x
+        d.y = d3.event.y + (d3.randomUniform()() - 0.5)*0.0001
+        d.x = d3.event.x+ (d3.randomUniform()() - 0.5)*0.0001
 
         // convert to lat lng
         latlng = VMT.mapholder.map.layerPointToLatLng([d.x,d.y])
 
      
-        this.__data__.data.lat = latlng.lat;
-        this.__data__.data.lng = latlng.lng;
+
 
         //update locations data
-        me.locations = d3.select("#facility_location_layer").selectAll(".locations_circles").data()
+        //me.locations = d3.select("#facility_location_layer").selectAll(".locations_circles").data()
 
-        me.locations = _.map(me.locations, function(d) {
-            return d.data
+
+        // me.locations = _.map(me.locations, function(d) {
+        //     return d.data
+        // })
+
+
+        _.each(me.locations, function(d2) {
+            if (d.data.id == d2.id) {
+                d2.x = d.data.x
+                d2.y = d.data.y
+                d2.lat = latlng.lat
+                d2.lng = latlng.lng
+
+            }
         })
+
         d3.select('#hover_panel')
                     .html("redrawing")
         // current_loss = compute_loss()
@@ -252,7 +274,7 @@ function VoronoiMap() {
         var k = $("#input_line_thickness").val()/10
 
         var loss_line_colour_scale = d3.scaleLinear().domain([min_loss, mid, max_loss]).range(["#04CE4E", "#CE8E00", "#CE043A"])
-        var loss_line_width_scale = d3.scaleLinear().domain([min_loss, mid, max_loss]).range([0.5*k, 1*k, 10*k])
+        var loss_line_width_scale = d3.scaleLinear().domain([min_loss, mid, max_loss]).range([0.5*k, 5*k, 10*k])
         var loss_line_opacity_scale = d3.scaleLinear().domain([min_loss, mid, max_loss]).range([0.3, 0.5, 1])
       
          me.demand_lines_layer.selectAll(".demand_data_lines").remove()
